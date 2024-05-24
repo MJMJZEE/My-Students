@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+     tools {
+        maven 'Maven'
+       
+        }
+    stages {
+        stage ("git checkout stage"){
+            steps { 
+                git 'https://github.com/SonarSource/sonar-scanning-examples.git'
+          }
+             
+        }
+       stage ("sonarqube analysis"){
+            steps {
+                withSonarQubeEnv(credentialsId: 'Sonaqube-2023',installationName: 'Sonar-2023') {
+    
+                  sh 'mvn -f sonar-scanner-maven/maven-basic/pom.xml clean install sonar:sonar'
+                }
+            }     
+    }
+      stage("jfrog upload"){
+        steps{
+          rtUpload (
+            serverId: 'Jfrog',
+              spec: '''{
+               "files": [
+                 {
+                  "pattern": "sonar-scanner-maven/maven-basic/target/*.jar",
+                  "target": "libs-snapshot-local/org/sonarqube/sonarscanner-maven-basic/1.0-SNAPSHOT/"
+                } 
+              ]
+            }''',
+     
+         )
+        }
+      }
+
+      stage("jfrog publish"){
+        steps{
+          rtPublishBuildInfo (
+           serverId: 'Jfrog',   
+         )
+        }
+      }
+    }
+}
+ 
